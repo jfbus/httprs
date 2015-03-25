@@ -7,9 +7,7 @@ A ReadSeeker for http.Response.Body
 import "github.com/jfbus/httprs"
 
 resp, err := http.Get(url)
-if err != nil {
-	return err
-}
+
 rs := httprs.NewHttpReadSeeker(resp)
 defer rs.Close()
 io.ReadFull(rs, buf) // reads the first bytes from the response
