@@ -6,7 +6,7 @@ A ReadSeeker for http.Response.Body
 ```
 import "github.com/jfbus/httprs"
 
-resp, err := http.Get(stream_url)
+resp, err := http.Get(url)
 if err != nil {
 	return err
 }
