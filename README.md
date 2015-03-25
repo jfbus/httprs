@@ -13,7 +13,7 @@ if err != nil {
 rs := httprs.NewHttpReadSeeker(resp)
 defer rs.Close()
 io.ReadFull(rs, buf) // reads the first bytes from the response
-rs.Seek(1024) // does an additional range request
+rs.Seek(1024, 0) // does an additional range request
 io.ReadFull(rs, buf) // reads the first bytes from the second response
 ```
 if you use a specific http.Client
