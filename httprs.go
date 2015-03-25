@@ -41,7 +41,6 @@ func (r *HttpReadSeeker) Read(p []byte) (n int, err error) {
 	}
 	if err == nil {
 		n, err = r.r.Read(p)
-		fmt.Println("read", string(p))
 		r.pos += int64(n)
 	}
 	return
