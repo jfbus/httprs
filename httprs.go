@@ -15,7 +15,6 @@ type HttpReadSeeker struct {
 	res *http.Response
 	r   io.ReadCloser
 	pos int64
-	eof bool
 }
 
 var _ io.ReadCloser = (*HttpReadSeeker)(nil)
@@ -67,7 +66,6 @@ func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 		}
 		offset = r.res.ContentLength - offset
 	}
-	r.eof = (r.res.ContentLength != -1 && offset > r.res.ContentLength)
 	if r.r != nil && r.pos != offset {
 		err = r.r.Close()
 		r.r = nil
