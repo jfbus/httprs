@@ -71,7 +71,9 @@ func newRS() *HttpReadSeeker {
 		return nil
 	}
 	res := &http.Response{
-		Header:        http.Header{},
+		Header: http.Header{
+			"Accept-Ranges": []string{"bytes"},
+		},
 		Request:       req,
 		ContentLength: SZ * 4,
 	}
