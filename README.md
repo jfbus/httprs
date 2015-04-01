@@ -3,6 +3,8 @@ A ReadSeeker for http.Response.Body
 
 [![wercker status](https://app.wercker.com/status/b8ab18faefae7d1f88f9f23d642f0847/s/master "wercker status")](https://app.wercker.com/project/bykey/b8ab18faefae7d1f88f9f23d642f0847)
 
+## Usage
+
 ```
 import "github.com/jfbus/httprs"
 
@@ -18,3 +20,11 @@ if you use a specific http.Client :
 ```
 rs := httprs.NewHttpReadSeeker(resp, client)
 ```
+
+## Doc
+
+See http://godoc.org/github.com/jfbus/httprs
+
+## LICENSE
+
+MIT - See LICENSE
