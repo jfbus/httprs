@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/mitchellh/copystructure"
 )
 
 // A HttpReadSeeker reads from a http.Response.Body. It can Seek
@@ -44,6 +46,8 @@ var (
 	ErrRangeRequestsNotSupported = errors.New("Range requests are not supported by the remote server")
 	// ErrInvalidRange is returned by Read when trying to read past the end of the file
 	ErrInvalidRange = errors.New("Invalid range")
+	// ErrContentHasChanged is returned by Read when the content has changed since the first request
+	ErrContentHasChanged = errors.New("Content has changed since first request")
 )
 
 // NewHttpReadSeeker returns a HttpReadSeeker, using the http.Response and, optionaly, the http.Client
@@ -66,9 +70,24 @@ func NewHttpReadSeeker(res *http.Response, client ...*http.Client) *HttpReadSeek
 	return r
 }
 
+// Clone clones the reader to enable parallel downloads of ranges
+func (r *HttpReadSeeker) Clone() (*HttpReadSeeker, error) {
+	req, err := copystructure.Copy(r.req)
+	if err != nil {
+		return nil, err
+	}
+	return &HttpReadSeeker{
+		req:     req.(*http.Request),
+		res:     r.res,
+		r:       nil,
+		canSeek: r.canSeek,
+		c:       r.c,
+	}, nil
+}
+
 // Read reads from the response body. It does a range request if Seek was called before.
 //
-// May return ErrRangeRequestsNotSupported or ErrInvalidRange
+// May return ErrRangeRequestsNotSupported, ErrInvalidRange or ErrContentHasChanged
 func (r *HttpReadSeeker) Read(p []byte) (n int, err error) {
 	if r.r == nil {
 		err = r.rangeRequest()
@@ -78,6 +97,14 @@ func (r *HttpReadSeeker) Read(p []byte) (n int, err error) {
 		r.pos += int64(n)
 	}
 	return
+}
+
+// ReadAt reads from the response body starting at offset off.
+//
+// May return ErrRangeRequestsNotSupported, ErrInvalidRange or ErrContentHasChanged
+func (r *HttpReadSeeker) ReadAt(p []byte, off int64) (n int, err error) {
+	r.Seek(off, 0)
+	return r.Read(p)
 }
 
 // Close closes the response body
@@ -119,6 +146,14 @@ func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 
 func (r *HttpReadSeeker) rangeRequest() error {
 	r.req.Header.Set("Range", fmt.Sprintf("bytes=%d-", r.pos))
+	etag, last := r.res.Header.Get("ETag"), r.res.Header.Get("Last-Modified")
+	switch {
+	case etag != "":
+		r.req.Header.Set("If-Range", etag)
+	case last != "":
+		r.req.Header.Set("If-Range", last)
+	}
+
 	res, err := r.c.Do(r.req)
 	if err != nil {
 		return err
@@ -126,6 +161,8 @@ func (r *HttpReadSeeker) rangeRequest() error {
 	switch res.StatusCode {
 	case http.StatusRequestedRangeNotSatisfiable:
 		return ErrInvalidRange
+	case http.StatusOK:
+		return ErrContentHasChanged
 	case http.StatusPartialContent:
 		r.r = res.Body
 		return nil
