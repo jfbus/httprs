@@ -148,10 +148,10 @@ func (r *HttpReadSeeker) rangeRequest() error {
 	r.req.Header.Set("Range", fmt.Sprintf("bytes=%d-", r.pos))
 	etag, last := r.res.Header.Get("ETag"), r.res.Header.Get("Last-Modified")
 	switch {
-	case etag != "":
-		r.req.Header.Set("If-Range", etag)
 	case last != "":
 		r.req.Header.Set("If-Range", last)
+	case etag != "":
+		r.req.Header.Set("If-Range", etag)
 	}
 
 	res, err := r.c.Do(r.req)
