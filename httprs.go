@@ -25,7 +25,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-const seekReadInsteadOfRequest = 1024
+const shortSeekBytes = 1024
 
 // A HttpReadSeeker reads from a http.Response.Body. It can Seek
 // by doing range requests.
@@ -36,6 +36,8 @@ type HttpReadSeeker struct {
 	r       io.ReadCloser
 	pos     int64
 	canSeek bool
+
+	Requests int
 }
 
 var _ io.ReadCloser = (*HttpReadSeeker)(nil)
@@ -141,7 +143,7 @@ func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	}
 	if r.r != nil {
 		// Try to read, which is cheaper than doing a request
-		if r.pos < offset && offset-r.pos <= seekReadInsteadOfRequest {
+		if r.pos < offset && offset-r.pos <= shortSeekBytes {
 			_, err := io.CopyN(ioutil.Discard, r, offset-r.pos)
 			if err != nil {
 				return 0, err
@@ -166,6 +168,8 @@ func (r *HttpReadSeeker) rangeRequest() error {
 	case etag != "":
 		r.req.Header.Set("If-Range", etag)
 	}
+
+	r.Requests++
 
 	res, err := r.c.Do(r.req)
 	if err != nil {
