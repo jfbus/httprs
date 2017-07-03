@@ -55,7 +55,7 @@ func (f *fakeRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	return fw.Response(), nil
 }
 
-const SZ = 1024
+const SZ = 4096
 
 func newRS() *HttpReadSeeker {
 	tmp, err := ioutil.TempFile(os.TempDir(), "httprs")
@@ -136,6 +136,44 @@ func TestHttpReaderSeeker(t *testing.T) {
 			So(n, ShouldEqual, 4)
 			So(err, ShouldBeNil)
 			So(string(buf), ShouldEqual, fmt.Sprintf("%04d", SZ-1))
+		})
+
+		Convey("Short seek should consume existing request", func() {
+			r := newRS()
+			So(r, ShouldNotBeNil)
+			defer r.Close()
+			buf := make([]byte, 4)
+			So(r.Requests, ShouldEqual, 0)
+			io.ReadFull(r, buf)
+			So(r.Requests, ShouldEqual, 1)
+			s, err := r.Seek(shortSeekBytes, os.SEEK_CUR)
+			So(r.Requests, ShouldEqual, 1)
+			So(s, ShouldEqual, shortSeekBytes+4)
+			So(err, ShouldBeNil)
+			n, err := io.ReadFull(r, buf)
+			So(n, ShouldEqual, 4)
+			So(err, ShouldBeNil)
+			So(string(buf), ShouldEqual, "0257")
+			So(r.Requests, ShouldEqual, 1)
+		})
+
+		Convey("Long seek should do a new request", func() {
+			r := newRS()
+			So(r, ShouldNotBeNil)
+			defer r.Close()
+			buf := make([]byte, 4)
+			So(r.Requests, ShouldEqual, 0)
+			io.ReadFull(r, buf)
+			So(r.Requests, ShouldEqual, 1)
+			s, err := r.Seek(shortSeekBytes+1, os.SEEK_CUR)
+			So(r.Requests, ShouldEqual, 1)
+			So(s, ShouldEqual, shortSeekBytes+4+1)
+			So(err, ShouldBeNil)
+			n, err := io.ReadFull(r, buf)
+			So(n, ShouldEqual, 4)
+			So(err, ShouldBeNil)
+			So(string(buf), ShouldEqual, "2570")
+			So(r.Requests, ShouldEqual, 2)
 		})
 	})
 }
