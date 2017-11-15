@@ -111,8 +111,15 @@ func (r *HttpReadSeeker) Read(p []byte) (n int, err error) {
 //
 // May return ErrRangeRequestsNotSupported, ErrInvalidRange or ErrContentHasChanged
 func (r *HttpReadSeeker) ReadAt(p []byte, off int64) (n int, err error) {
+	var nn int
+
 	r.Seek(off, 0)
-	return r.Read(p)
+
+	for n < len(p) && err == nil {
+		nn, err = r.Read(p[n:])
+		n += nn
+	}
+	return
 }
 
 // Close closes the response body
