@@ -209,7 +209,12 @@ func (r *HttpReadSeeker) rangeRequest() error {
 	case http.StatusRequestedRangeNotSatisfiable:
 		return ErrInvalidRange
 	case http.StatusOK:
-		return ErrContentHasChanged
+		// some servers return 200 OK for bytes=0-
+		if r.pos > 0 ||
+			(etag != "" && etag != res.Header.Get("ETag")) {
+			return ErrContentHasChanged
+		}
+		fallthrough
 	case http.StatusPartialContent:
 		r.r = res.Body
 		return nil
