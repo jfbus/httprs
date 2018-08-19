@@ -31,13 +31,12 @@ const shortSeekBytes = 1024
 // A HttpReadSeeker reads from a http.Response.Body. It can Seek
 // by doing range requests.
 type HttpReadSeeker struct {
-	c       *http.Client
-	req     *http.Request
-	res     *http.Response
-	ctx     context.Context
-	r       io.ReadCloser
-	pos     int64
-	canSeek bool
+	c   *http.Client
+	req *http.Request
+	res *http.Response
+	ctx context.Context
+	r   io.ReadCloser
+	pos int64
 
 	Requests int
 }
@@ -64,11 +63,10 @@ var (
 // res.Request will be reused for range requests, headers may be added/removed
 func NewHttpReadSeeker(res *http.Response, client ...*http.Client) *HttpReadSeeker {
 	r := &HttpReadSeeker{
-		req:     res.Request,
-		ctx:     res.Request.Context(),
-		res:     res,
-		r:       res.Body,
-		canSeek: (res.Header.Get("Accept-Ranges") == "bytes"),
+		req: res.Request,
+		ctx: res.Request.Context(),
+		res: res,
+		r:   res.Body,
 	}
 	if len(client) > 0 {
 		r.c = client[0]
@@ -85,11 +83,10 @@ func (r *HttpReadSeeker) Clone() (*HttpReadSeeker, error) {
 		return nil, err
 	}
 	return &HttpReadSeeker{
-		req:     req.(*http.Request),
-		res:     r.res,
-		r:       nil,
-		canSeek: r.canSeek,
-		c:       r.c,
+		req: req.(*http.Request),
+		res: r.res,
+		r:   nil,
+		c:   r.c,
 	}, nil
 }
 
@@ -137,9 +134,6 @@ func (r *HttpReadSeeker) Close() error {
 //
 // May return ErrNoContentLength or ErrRangeRequestsNotSupported
 func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
-	if !r.canSeek {
-		return 0, ErrRangeRequestsNotSupported
-	}
 	var err error
 	switch whence {
 	case 0:
