@@ -149,7 +149,7 @@ func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 		if r.res.ContentLength <= 0 {
 			return 0, ErrNoContentLength
 		}
-		offset = r.res.ContentLength - offset
+		offset = r.res.ContentLength + offset
 	}
 	if r.r != nil {
 		// Try to read, which is cheaper than doing a request
