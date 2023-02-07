@@ -3,7 +3,6 @@ package httprs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,7 +36,7 @@ func (f *fakeResponseWriter) WriteHeader(code int) {
 }
 
 func (f *fakeResponseWriter) Response() *http.Response {
-	f.tmp.Seek(0, os.SEEK_SET)
+	f.tmp.Seek(0, io.SeekStart)
 	return &http.Response{Body: f.tmp, StatusCode: f.code, Header: f.h}
 }
 
@@ -49,7 +48,7 @@ type fakeRoundTripper struct {
 func (f *fakeRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	fw := &fakeResponseWriter{h: http.Header{}}
 	var err error
-	fw.tmp, err = ioutil.TempFile(os.TempDir(), "httprs")
+	fw.tmp, err = os.CreateTemp(os.TempDir(), "httprs")
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +69,7 @@ type RSFactory func() *HttpReadSeeker
 
 func newRSFactory(brokenServer bool) RSFactory {
 	return func() *HttpReadSeeker {
-		tmp, err := ioutil.TempFile(os.TempDir(), "httprs")
+		tmp, err := os.CreateTemp(os.TempDir(), "httprs")
 		if err != nil {
 			return nil
 		}
@@ -95,11 +94,11 @@ func newRSFactory(brokenServer bool) RSFactory {
 
 func TestHttpWebServer(t *testing.T) {
 	Convey("Scenario: testing WebServer", t, func() {
-		dir, err := ioutil.TempDir("", "webserver")
+		dir, err := os.MkdirTemp("", "webserver")
 		So(err, ShouldBeNil)
 		defer os.RemoveAll(dir)
 
-		err = ioutil.WriteFile(filepath.Join(dir, "file"), make([]byte, 10000), 0755)
+		err = os.WriteFile(filepath.Join(dir, "file"), make([]byte, 10000), 0755)
 		So(err, ShouldBeNil)
 
 		server := httptest.NewServer(http.FileServer(http.Dir(dir)))
@@ -163,11 +162,11 @@ func testHttpReaderSeeker(t *testing.T, newRS RSFactory) {
 			So(string(buf), ShouldEqual, "0000")
 		})
 
-		Convey("Seek w SEEK_SET should seek to right offset", func() {
+		Convey("Seek w SeekStart should seek to right offset", func() {
 			r := newRS()
 			So(r, ShouldNotBeNil)
 			defer r.Close()
-			s, err := r.Seek(4*64, os.SEEK_SET)
+			s, err := r.Seek(4*64, io.SeekStart)
 			So(s, ShouldEqual, 4*64)
 			So(err, ShouldBeNil)
 			buf := make([]byte, 4)
@@ -177,13 +176,13 @@ func testHttpReaderSeeker(t *testing.T, newRS RSFactory) {
 			So(string(buf), ShouldEqual, "0064")
 		})
 
-		Convey("Read + Seek w SEEK_CUR should seek to right offset", func() {
+		Convey("Read + Seek w SeekCurrent should seek to right offset", func() {
 			r := newRS()
 			So(r, ShouldNotBeNil)
 			defer r.Close()
 			buf := make([]byte, 4)
 			io.ReadFull(r, buf)
-			s, err := r.Seek(4*64, os.SEEK_CUR)
+			s, err := r.Seek(4*64, io.SeekCurrent)
 			So(s, ShouldEqual, 4*64+4)
 			So(err, ShouldBeNil)
 			n, err := io.ReadFull(r, buf)
@@ -192,13 +191,13 @@ func testHttpReaderSeeker(t *testing.T, newRS RSFactory) {
 			So(string(buf), ShouldEqual, "0065")
 		})
 
-		Convey("Seek w SEEK_END should seek to right offset", func() {
+		Convey("Seek w SeekEnd should seek to right offset", func() {
 			r := newRS()
 			So(r, ShouldNotBeNil)
 			defer r.Close()
 			buf := make([]byte, 4)
 			io.ReadFull(r, buf)
-			s, err := r.Seek(-4, os.SEEK_END)
+			s, err := r.Seek(-4, io.SeekEnd)
 			So(s, ShouldEqual, SZ*4-4)
 			So(err, ShouldBeNil)
 			n, err := io.ReadFull(r, buf)
@@ -215,7 +214,7 @@ func testHttpReaderSeeker(t *testing.T, newRS RSFactory) {
 			So(r.Requests, ShouldEqual, 0)
 			io.ReadFull(r, buf)
 			So(r.Requests, ShouldEqual, 1)
-			s, err := r.Seek(shortSeekBytes, os.SEEK_CUR)
+			s, err := r.Seek(shortSeekBytes, io.SeekCurrent)
 			So(r.Requests, ShouldEqual, 1)
 			So(s, ShouldEqual, shortSeekBytes+4)
 			So(err, ShouldBeNil)
@@ -234,7 +233,7 @@ func testHttpReaderSeeker(t *testing.T, newRS RSFactory) {
 			So(r.Requests, ShouldEqual, 0)
 			io.ReadFull(r, buf)
 			So(r.Requests, ShouldEqual, 1)
-			s, err := r.Seek(shortSeekBytes+1, os.SEEK_CUR)
+			s, err := r.Seek(shortSeekBytes+1, io.SeekCurrent)
 			So(r.Requests, ShouldEqual, 1)
 			So(s, ShouldEqual, shortSeekBytes+4+1)
 			So(err, ShouldBeNil)
