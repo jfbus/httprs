@@ -198,7 +198,7 @@ func testHttpReaderSeeker(t *testing.T, newRS RSFactory) {
 			defer r.Close()
 			buf := make([]byte, 4)
 			io.ReadFull(r, buf)
-			s, err := r.Seek(4, os.SEEK_END)
+			s, err := r.Seek(-4, os.SEEK_END)
 			So(s, ShouldEqual, SZ*4-4)
 			So(err, ShouldBeNil)
 			n, err := io.ReadFull(r, buf)
