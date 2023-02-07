@@ -136,10 +136,10 @@ func (r *HttpReadSeeker) Close() error {
 func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	var err error
 	switch whence {
-	case 0:
-	case 1:
+	case io.SeekStart:
+	case io.SeekCurrent:
 		offset += r.pos
-	case 2:
+	case io.SeekEnd:
 		if r.res.ContentLength <= 0 {
 			return 0, ErrNoContentLength
 		}
