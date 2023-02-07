@@ -10,7 +10,8 @@ Usage :
 	rs.Seek(1024, 0) // moves the position, but does no range request
 	io.ReadFull(rs, buf) // does a range request and reads from the response body
 
-If you want use a specific http.Client for additional range requests :
+If you want to use a specific http.Client for additional range requests :
+
 	rs := httprs.NewHttpReadSeeker(resp, client)
 */
 package httprs
@@ -20,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/mitchellh/copystructure"
@@ -148,7 +148,7 @@ func (r *HttpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	if r.r != nil {
 		// Try to read, which is cheaper than doing a request
 		if r.pos < offset && offset-r.pos <= shortSeekBytes {
-			_, err := io.CopyN(ioutil.Discard, r, offset-r.pos)
+			_, err := io.CopyN(io.Discard, r, offset-r.pos)
 			if err != nil {
 				return 0, err
 			}
