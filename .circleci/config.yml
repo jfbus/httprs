@@ -1,0 +1,21 @@
+version: 2.1
+jobs:
+  build:
+    executor:
+      name: go/default
+      tag: '1.18'
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+      - go/test:
+          covermode: atomic
+          failfast: true
+          race: false
+orbs:
+  go: circleci/go@1.7.1
+workflows:
+  main:
+    jobs:
+      - build
